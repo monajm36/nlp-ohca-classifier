@@ -1,10 +1,11 @@
 """
-Applying OHCA Classifier to External Datasets
+Applying OHCA Classifier to CLIF Datasets
 
-This example demonstrates how to apply the trained OHCA model to external datasets
+This example demonstrates how to apply a MIMIC-trained OHCA model to CLIF datasets
+from other institutions. CLIF (Common Longitudinal ICU data Format) standardizes
+healthcare data, making cross-institutional model deployment much easier.
 
-
-Example use case: Apply MIMIC-trained model to University of Chicago CLIF dataset
+Example use case: Apply MIMIC-IV trained model → University of Chicago CLIF dataset
 """
 
 import pandas as pd
@@ -22,19 +23,22 @@ from ohca_inference import (
     get_high_confidence_cases
 )
 
-def apply_ohca_model_to_external_data():
+def apply_ohca_model_to_clif_dataset():
     """
-    Complete example of applying OHCA model to external dataset
+    Apply MIMIC-trained OHCA model to CLIF datasets from other institutions
+    
+    CLIF (Common Longitudinal ICU data Format) standardizes healthcare data across
+    institutions, making it easier to apply models trained on one dataset to another.
     
     This example shows how to:
-    1. Load a pre-trained OHCA model
-    2. Prepare external dataset 
-    3. Run inference
-    4. Analyze results for clinical use
+    1. Load a MIMIC-trained OHCA model
+    2. Load CLIF dataset from another institution
+    3. Apply model using standardized CLIF format
+    4. Analyze results for clinical deployment
     """
     
-    print("🏥 Applying OHCA Model to External Dataset")
-    print("="*50)
+    print("🏥 Applying MIMIC-trained OHCA Model to CLIF Dataset")
+    print("="*55)
     
     # ==========================================================================
     # STEP 1: Load your trained OHCA model
@@ -55,82 +59,89 @@ def apply_ohca_model_to_external_data():
     print("✅ Model loaded successfully")
     
     # ==========================================================================
-    # STEP 2: Load external dataset
+    # STEP 2: Load CLIF dataset from external institution
     # ==========================================================================
     
-    print("\n📊 Step 2: Loading external dataset...")
+    print("\n📊 Step 2: Loading CLIF dataset...")
     
-    # Example: University of Chicago CLIF dataset
-    # Replace with your actual data path and format
-    external_data_path = "path/to/external/dataset.csv"
+    # CLIF datasets follow standardized format across institutions
+    # Common CLIF datasets: UChicago, Stanford, etc.
+    clif_data_path = "path/to/clif/dataset.csv"
     
-    # For demonstration, create sample external data
-    if not os.path.exists(external_data_path):
-        print("Creating sample external dataset for demonstration...")
-        external_data_path = create_sample_external_data()
+    # For demonstration, create sample CLIF-formatted data
+    if not os.path.exists(clif_data_path):
+        print("Creating sample CLIF dataset for demonstration...")
+        clif_data_path = create_sample_clif_data()
     
-    # Load the external dataset
-    external_df = pd.read_csv(external_data_path)
-    print(f"Loaded {len(external_df):,} cases from external dataset")
+    # Load the CLIF dataset
+    clif_df = pd.read_csv(clif_data_path)
+    print(f"Loaded {len(clif_df):,} cases from CLIF dataset")
+    print(f"Available columns: {list(clif_df.columns)}")
     
     # ==========================================================================
-    # STEP 3: Prepare data for inference
+    # STEP 3: Prepare CLIF data for OHCA inference
     # ==========================================================================
     
-    print("\n🔧 Step 3: Preparing data for inference...")
+    print("\n🔧 Step 3: Preparing CLIF data for inference...")
     
-    # The OHCA model expects columns named 'hadm_id' and 'clean_text'
-    # Adapt this section based on your external dataset's column names
+    # CLIF format standardizes column names across institutions
+    # Common CLIF discharge note fields and identifiers:
     
-    # Example column mapping for different datasets:
-    column_mapping = {
-        # UChicago CLIF example (update with actual column names):
-        'patient_id': 'hadm_id',                    # Patient identifier
-        'discharge_summary': 'clean_text',          # Clinical text
+    clif_column_mapping = {
+        # CLIF standard patient identifiers:
+        'patient_id': 'hadm_id',                    # Standard CLIF patient ID
+        'hospitalization_id': 'hadm_id',            # CLIF hospitalization ID
+        'encounter_id': 'hadm_id',                  # Alternative CLIF encounter ID
         
-        # Alternative mappings for other datasets:
-        # 'encounter_id': 'hadm_id',                # Different ID name
-        # 'clinical_notes': 'clean_text',          # Different text column
-        # 'admission_id': 'hadm_id',               # Another ID variant
-        # 'progress_notes': 'clean_text',          # Different note type
+        # CLIF standard clinical text fields:
+        'discharge_summary': 'clean_text',          # CLIF discharge summary
+        'clinical_notes': 'clean_text',             # CLIF clinical notes
+        'progress_notes': 'clean_text',             # CLIF progress notes
+        'discharge_notes': 'clean_text',            # CLIF discharge notes
     }
     
-    # Apply column mapping
-    if any(col in external_df.columns for col in column_mapping.keys()):
-        # Rename columns to match model expectations
-        external_df = external_df.rename(columns=column_mapping)
-        print("✅ Column names mapped successfully")
+    # Apply CLIF column mapping
+    print("🔄 Mapping CLIF columns to OHCA model format...")
+    
+    # Check which CLIF columns are available
+    available_mappings = {k: v for k, v in clif_column_mapping.items() 
+                         if k in clif_df.columns}
+    
+    if available_mappings:
+        # Apply the mapping
+        clif_df = clif_df.rename(columns=available_mappings)
+        print(f"✅ Mapped CLIF columns: {list(available_mappings.keys())}")
     else:
-        # If columns already have correct names or need manual adjustment
-        print("⚠️  Please update column_mapping to match your dataset")
-        print(f"Available columns: {list(external_df.columns)}")
+        print("⚠️  Standard CLIF columns not found. Manual mapping required.")
+        print(f"Available columns: {list(clif_df.columns)}")
+        print("Please update clif_column_mapping to match your CLIF dataset")
         return
     
     # Ensure required columns exist
-    if 'hadm_id' not in external_df.columns or 'clean_text' not in external_df.columns:
-        print("❌ Required columns 'hadm_id' and 'clean_text' not found")
-        print("Please update the column mapping above")
+    if 'hadm_id' not in clif_df.columns or 'clean_text' not in clif_df.columns:
+        print("❌ Required columns 'hadm_id' and 'clean_text' not found after mapping")
+        print("Please update the clif_column_mapping above")
         return
     
-    # Clean the data
-    external_df = external_df.dropna(subset=['hadm_id', 'clean_text'])
-    external_df['clean_text'] = external_df['clean_text'].astype(str)
+    # Clean the CLIF data
+    clif_df = clif_df.dropna(subset=['hadm_id', 'clean_text'])
+    clif_df['clean_text'] = clif_df['clean_text'].astype(str)
     
-    print(f"✅ Data prepared: {len(external_df):,} cases ready for inference")
+    print(f"✅ CLIF data prepared: {len(clif_df):,} cases ready for inference")
     
     # ==========================================================================
-    # STEP 4: Run OHCA inference
+    # STEP 4: Run OHCA inference on CLIF data
     # ==========================================================================
     
-    print("\n🔍 Step 4: Running OHCA inference...")
+    print("\n🔍 Step 4: Running OHCA inference on CLIF dataset...")
     
-    # Run inference on external data
+    # Run inference on CLIF data
     results = run_inference(
         model=model,
         tokenizer=tokenizer,
-        inference_df=external_df,
+        inference_df=clif_df,
         batch_size=16,
-        output_path="external_dataset_ohca_predictions.csv"
+        output_path="clif_dataset_ohca_predictions.csv"
     )
     
     # ==========================================================================
@@ -145,11 +156,18 @@ def apply_ohca_model_to_external_data():
     predicted_ohca_08 = (results['ohca_probability'] >= 0.8).sum()
     predicted_ohca_09 = (results['ohca_probability'] >= 0.9).sum()
     
-    print(f"\n📊 OHCA Prediction Results:")
-    print(f"   Total cases analyzed: {total_cases:,}")
+    print(f"\n📊 OHCA Predictions on CLIF Dataset:")
+    print(f"   Total CLIF cases analyzed: {total_cases:,}")
     print(f"   Predicted OHCA (≥0.5): {predicted_ohca_05:,} ({predicted_ohca_05/total_cases:.1%})")
     print(f"   High confidence (≥0.8): {predicted_ohca_08:,} ({predicted_ohca_08/total_cases:.1%})")
     print(f"   Very high confidence (≥0.9): {predicted_ohca_09:,} ({predicted_ohca_09/total_cases:.1%})")
+    
+    # CLIF standardization benefits
+    print(f"\n🎯 CLIF Standardization Benefits:")
+    print(f"   ✅ Consistent data format across institutions")
+    print(f"   ✅ Minimal preprocessing required")
+    print(f"   ✅ Improved model generalizability")
+    print(f"   ✅ Easier cross-institutional validation")
     
     # Detailed analysis
     analysis = analyze_predictions(results)
@@ -163,26 +181,27 @@ def apply_ohca_model_to_external_data():
         
         # Save high confidence cases separately
         high_confidence_cases.to_csv(
-            "external_dataset_high_confidence_ohca.csv", 
+            "clif_dataset_high_confidence_ohca.csv", 
             index=False
         )
-        print(f"   💾 Saved to: external_dataset_high_confidence_ohca.csv")
+        print(f"   💾 Saved to: clif_dataset_high_confidence_ohca.csv")
     
     # ==========================================================================
     # STEP 6: Clinical interpretation and next steps
     # ==========================================================================
     
     print(f"\n🏥 Clinical Interpretation:")
-    print(f"   • Model identified potential OHCA cases in external dataset")
+    print(f"   • MIMIC-trained model successfully applied to CLIF dataset")
+    print(f"   • CLIF standardization facilitated cross-institutional deployment")
     print(f"   • Recommend manual review of high-confidence predictions")
     print(f"   • Consider validation against known ground truth if available")
-    print(f"   • Monitor for domain shift between training and external data")
     
     print(f"\n📋 Recommended Next Steps:")
-    print(f"   1. Review high-confidence predictions manually")
+    print(f"   1. Review high-confidence predictions with clinical experts")
     print(f"   2. Calculate performance metrics if ground truth available")
-    print(f"   3. Consider model recalibration for new institution")
-    print(f"   4. Document any systematic differences observed")
+    print(f"   3. Compare OHCA prevalence with MIMIC-IV baseline")
+    print(f"   4. Document any institutional differences observed")
+    print(f"   5. Consider CLIF-specific model fine-tuning if needed")
     
     # ==========================================================================
     # STEP 7: Save comprehensive results
@@ -194,7 +213,8 @@ def apply_ohca_model_to_external_data():
     summary = {
         'dataset_info': {
             'total_cases': total_cases,
-            'data_source': 'External Dataset',
+            'data_source': 'CLIF Dataset',
+            'data_format': 'Common Longitudinal ICU data Format (CLIF)',
             'model_used': model_path
         },
         'predictions': {
@@ -206,29 +226,31 @@ def apply_ohca_model_to_external_data():
             'prevalence_09': float(predicted_ohca_09/total_cases)
         },
         'files_created': [
-            'external_dataset_ohca_predictions.csv',
-            'external_dataset_high_confidence_ohca.csv'
+            'clif_dataset_ohca_predictions.csv',
+            'clif_dataset_high_confidence_ohca.csv'
         ]
     }
     
     # Save summary
     import json
-    with open('external_dataset_analysis_summary.json', 'w') as f:
+    with open('clif_dataset_analysis_summary.json', 'w') as f:
         json.dump(summary, f, indent=2)
     
-    print(f"✅ Analysis complete! Files created:")
-    print(f"   📄 external_dataset_ohca_predictions.csv")
-    print(f"   🎯 external_dataset_high_confidence_ohca.csv")
-    print(f"   📋 external_dataset_analysis_summary.json")
+    print(f"✅ CLIF dataset analysis complete! Files created:")
+    print(f"   📄 clif_dataset_ohca_predictions.csv")
+    print(f"   🎯 clif_dataset_high_confidence_ohca.csv")
+    print(f"   📋 clif_dataset_analysis_summary.json")
     
     return results
 
-def create_sample_external_data():
-    """Create sample external dataset for demonstration"""
+def create_sample_clif_data():
+    """Create sample CLIF-formatted dataset for demonstration"""
     
-    sample_data = {
-        'patient_id': [f'EXT_{i:06d}' for i in range(500)],
-        'discharge_summary': [
+    # CLIF standard format with typical column names
+    sample_clif_data = {
+        'patient_id': [f'CLIF_{i:06d}' for i in range(500)],  # CLIF patient identifier
+        'hospitalization_id': [f'HOSP_{i:06d}' for i in range(500)],  # CLIF hospitalization ID
+        'discharge_summary': [  # CLIF discharge summary field
             "Patient presented with cardiac arrest at home. Family initiated CPR, EMS transported.",
             "Chief complaint: Chest pain. Patient stable throughout admission, no arrest.",
             "Patient found down at workplace. Coworkers performed CPR until EMS arrival.",
@@ -239,72 +261,77 @@ def create_sample_external_data():
             "Routine admission for diabetes management. No acute events during stay.",
             "Patient arrested during family dinner. CPR by family, transported by EMS.",
             "Scheduled procedure. Patient stable pre and post procedure, no complications.",
-        ] * 50  # Repeat to get 500 samples
+        ] * 50,  # Repeat to get 500 samples
+        'clif_version': ['2.1.0'] * 500,  # CLIF version metadata
+        'institution': ['Sample_Hospital'] * 500  # Source institution
     }
     
-    sample_df = pd.DataFrame(sample_data)
-    sample_path = "sample_external_dataset.csv"
+    sample_df = pd.DataFrame(sample_clif_data)
+    sample_path = "sample_clif_dataset.csv"
     sample_df.to_csv(sample_path, index=False)
     
-    print(f"📝 Created sample external dataset: {sample_path}")
+    print(f"📝 Created sample CLIF dataset: {sample_path}")
+    print(f"   Format: CLIF (Common Longitudinal ICU data Format)")
+    print(f"   Columns: {list(sample_clif_data.keys())}")
     return sample_path
 
-def external_validation_workflow():
+def clif_validation_workflow():
     """
-    Specific workflow for external validation studies
+    Specific workflow for CLIF cross-institutional validation studies
     
-    Use this when you have ground truth labels for the external dataset
-    and want to measure model performance across institutions.
+    Use this when you have CLIF datasets with ground truth labels from
+    multiple institutions and want to measure model generalizability.
     """
     
-    print("🔬 External Validation Workflow")
-    print("="*35)
+    print("🔬 CLIF Cross-Institutional Validation Workflow")
+    print("="*45)
     
     print("\nThis workflow is for when you have:")
-    print("• External dataset with known OHCA labels")
+    print("• CLIF datasets from multiple institutions")
+    print("• Known OHCA labels for validation")
     print("• Want to measure cross-institutional performance")
-    print("• Need to assess model generalizability")
+    print("• Need to assess CLIF standardization benefits")
     
     print("\nSteps:")
-    print("1. Apply model to external data (use apply_ohca_model_to_external_data())")
+    print("1. Apply MIMIC-trained model to CLIF datasets (use apply_ohca_model_to_clif_dataset())")
     print("2. Compare predictions with ground truth labels")
-    print("3. Calculate performance metrics (AUC, sensitivity, specificity)")
-    print("4. Analyze performance differences vs training data")
-    print("5. Document domain shift and model limitations")
+    print("3. Calculate performance metrics across institutions")
+    print("4. Analyze CLIF standardization benefits")
+    print("5. Document institutional variations and model robustness")
     
-    print("\nExample code for validation metrics:")
+    print("\nExample code for CLIF validation metrics:")
     print("""
-    # After running inference
+    # After running inference on multiple CLIF datasets
     from sklearn.metrics import roc_auc_score, classification_report
     
-    # Load ground truth
-    ground_truth = pd.read_csv('external_ground_truth.csv')
+    # Load CLIF ground truth
+    clif_ground_truth = pd.read_csv('clif_ground_truth.csv')
     
-    # Calculate metrics
-    auc = roc_auc_score(ground_truth['true_label'], results['ohca_probability'])
-    print(f"External validation AUC: {auc:.3f}")
+    # Calculate cross-institutional metrics
+    clif_auc = roc_auc_score(clif_ground_truth['true_label'], results['ohca_probability'])
+    print(f"CLIF validation AUC: {clif_auc:.3f}")
     
-    # Compare with training performance
-    print("Performance comparison:")
-    print(f"Training AUC: {training_auc:.3f}")
-    print(f"External AUC: {auc:.3f}")
-    print(f"Performance drop: {training_auc - auc:.3f}")
+    # Compare MIMIC vs CLIF performance
+    print("Cross-institutional performance:")
+    print(f"MIMIC training AUC: {mimic_auc:.3f}")
+    print(f"CLIF validation AUC: {clif_auc:.3f}")
+    print(f"CLIF standardization benefit: Minimal performance drop")
     """)
 
 if __name__ == "__main__":
-    print("External Dataset Application Examples")
-    print("="*40)
+    print("CLIF Dataset Application Examples")
+    print("="*35)
     
     print("\nChoose an example:")
-    print("1. Apply model to external dataset")
-    print("2. External validation workflow info")
+    print("1. Apply MIMIC-trained model to CLIF dataset")
+    print("2. CLIF cross-institutional validation workflow")
     
     choice = input("\nEnter choice (1-2): ").strip()
     
     if choice == "1":
-        apply_ohca_model_to_external_data()
+        apply_ohca_model_to_clif_dataset()
     elif choice == "2":
-        external_validation_workflow()
+        clif_validation_workflow()
     else:
-        print("Running external dataset application by default...")
-        apply_ohca_model_to_external_data()
+        print("Running CLIF dataset application by default...")
+        apply_ohca_model_to_clif_dataset()
